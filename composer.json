@@ -1,0 +1,12 @@
+{
+    "name": "olragon/graphql_api",
+    "authors": [
+        {
+            "name": "Long Nguyen",
+            "email": "olragon@gmail.com"
+        }
+    ],
+    "require": {
+        "webonyx/graphql-php": "dev-master"
+    }
+}

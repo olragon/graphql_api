@@ -1,0 +1,8 @@
+name = GraphQL API
+core = 7.x
+
+dependencies[] = entity
+dependencies[] = xautoload
+dependencies[] = composer_manager
+
+files[] = tests/graphql_api.test

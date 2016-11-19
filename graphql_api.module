@@ -1,0 +1,95 @@
+<?php
+/**
+ * @file
+ */
+define('GRAPHQL_API_PATH', drupal_get_path('module', 'graphql_api'));
+
+/**
+ * Implements hook_menu().
+ *
+ * @return array
+ */
+function graphql_api_menu() {
+  $items = [];
+
+  $items['graphql'] = [
+    'page callback' => 'graphql_api_page_callback',
+    'page arguments' => [],
+    'access arguments' => ['use graphql_api query'],
+    'file path' => GRAPHQL_API_PATH . '/includes',
+    'file' => 'graphql_api_page_callback.inc'
+  ];
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function graphql_api_permission() {
+  return array(
+    'use graphql_api query' => array(
+      'title' => t('Use GraphQL query'),
+      'description' => t('Perform query on graphql endpoint.'),
+    ),
+  );
+}
+
+/**
+ * Get GraphQL info
+ *
+ * @return array|mixed
+ */
+function graphql_api_info() {
+  $info = [];
+  foreach (module_list() as $module => $module_info) {
+    if (module_load_include('inc', $module, $module.'.graphql')) {
+      foreach (module_implements('graphql_api_info') as $module) {
+        $info += module_invoke($module, 'graphql_api_info');
+      }
+    }
+  }
+  drupal_alter('graphql_api_info', $info);
+  return $info;
+}
+
+/**
+ * Get entity field query
+ *
+ * @param $entity_type
+ * @param array $conditions
+ * @return bool|\EntityFieldQuery
+ */
+function graphql_api_entity_get_query($entity_type, $conditions = []) {
+  $info = entity_get_info($entity_type);
+  $props = entity_get_property_info($entity_type);
+  if (!$info || !$props) {
+    return FALSE;
+  }
+
+  $all_fields = [];
+
+  // get all fields attached to this entity type
+  if (!empty($props['bundles'])) {
+    foreach ($props['bundles'] as $bundle => $bundle_info) {
+      foreach ($bundle_info['properties'] as $field => $field_info) {
+        $all_fields[] = $field;
+      }
+    }
+  }
+
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', $entity_type);
+  foreach ($conditions as $prop => $val) {
+    if (in_array($prop, $info['schema_fields_sql']['base table'])) {
+      $query->propertyCondition($prop, $val);
+    }
+    else if (in_array($prop, $all_fields)) {
+      foreach ($val as $col => $f_val) {
+        $query->fieldCondition($prop, $col, $f_val);
+      }
+    }
+  }
+
+  return $query;
+}

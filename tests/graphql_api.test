@@ -1,0 +1,37 @@
+<?php
+/**
+ * @file
+ */
+
+class Graphql_API_Test extends DrupalWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'GraphQL API',
+      'description' => 'Test GraphQL API.',
+      'group' => 'GraphQL API'
+    );
+  }
+
+  /**
+   * Setup data before testing.
+   *
+   * @see DrupalWebTestCase::setUp()
+   */
+  protected function setUp() {
+    parent::setUp('entity', 'entity_token', 'xautoload', 'composer_manager');
+    $this->accessUser = $this->drupalCreateUser(array('use graphql_api query'));
+    $this->denyUser = $this->drupalCreateUser();
+  }
+
+  public function testDenyAccessGraphqlEndpoint() {
+    $this->drupalLogin($this->denyUser);
+    $this->assertFALSE(drupal_valid_path('graphql'), 'User without permission `use graphql_api query` cannot access /graphql');
+  }
+
+  public function testAccessGraphqlEndpoint() {
+    $this->drupalLogin($this->accessUser);
+    $this->assertTrue(drupal_valid_path('graphql'), 'User with permission `use graphql_api query` can access /graphql');
+  }
+
+}
