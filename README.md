@@ -1,6 +1,8 @@
 GraphQL API for Drupal 7
 ------------------------
 
+[![Build Status](https://travis-ci.org/olragon/graphql_api.svg?branch=master)](https://travis-ci.org/olragon/graphql_api)
+
 The problems
 ------------
 
