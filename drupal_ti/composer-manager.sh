@@ -9,4 +9,8 @@ drupal_ti_ensure_drupal
 cd "$DRUPAL_TI_DRUPAL_DIR"
 
 drush dl composer_manager --yes
+
+# Prevent composer auto download composer command
+drush vset composer_manager_autobuild_packages 0
+
 drush pm-enable composer_manager --yes
