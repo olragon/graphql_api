@@ -108,7 +108,7 @@ before_install:
   - drupal-ti before_install
 
 install:
-  - drupal-ti install
+  - drupal-ti install --include drupal_ti/composer-manager.sh
 
 before_script:
   - drupal-ti before_script
