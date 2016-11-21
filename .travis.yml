@@ -35,7 +35,7 @@ env:
 
     # Define runners and environment vars to include before and after the
     # main runners / environment vars.
-    - DRUPAL_TI_SCRIPT_DIR_BEFORE="./drupal_ti/before"
+    #- DRUPAL_TI_SCRIPT_DIR_BEFORE="./drupal_ti/before"
     #- DRUPAL_TI_SCRIPT_DIR_AFTER="./drupal_ti/after"
 
     # The environment to use, supported are: drupal-7, drupal-8
@@ -108,10 +108,10 @@ before_install:
   - drupal-ti before_install
 
 install:
-  - drupal-ti install --include drupal_ti/composer-manager.sh
+  - drupal-ti install
 
 before_script:
-  - drupal-ti before_script
+  - drupal-ti --include drupal_ti/composer-manager.sh before_script
 
 script:
   - drupal-ti script
