@@ -1,0 +1,9 @@
+{
+    node {
+        nid,
+        title,
+        author {
+            name
+        }
+    }
+}

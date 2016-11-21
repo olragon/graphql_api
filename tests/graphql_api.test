@@ -19,19 +19,144 @@ class Graphql_API_Test extends DrupalWebTestCase {
    * @see DrupalWebTestCase::setUp()
    */
   protected function setUp() {
-    parent::setUp('entity', 'entity_token', 'xautoload', 'composer_manager');
-    $this->accessUser = $this->drupalCreateUser(array('use graphql_api query'));
-    $this->denyUser = $this->drupalCreateUser();
+    parent::setUp('entity', 'entity_token', 'xautoload', 'composer_manager', 'graphql_api');
+    $this->accessUser = $this->drupalCreateUser(array('access content', 'use graphql_api query'));
+    $this->denyUser = $this->drupalCreateUser(array('access content'));
+
+    $this->node = $this->drupalCreateNode([
+      'uid' => $this->accessUser->uid
+    ]);
+
+    $this->tag = $this->createTerm('tags');
+    $this->nodeWithTags = $this->drupalCreateNode([
+      'type' => 'article'
+    ]);
+    $wrap = entity_metadata_wrapper('node', $this->nodeWithTags);
+    $wrap->field_tags->set([$this->tag]);
+    $wrap->save();
   }
 
   public function testDenyAccessGraphqlEndpoint() {
-    $this->drupalLogin($this->denyUser);
-    $this->assertFALSE(drupal_valid_path('graphql'), 'User without permission `use graphql_api query` cannot access /graphql');
+    $this->httpRequest('graphql', 'GET', $this->denyUser);
+    $this->assertResponse('403', 'User without permission `use graphql_api query` cannot access /graphql');
   }
 
   public function testAccessGraphqlEndpoint() {
-    $this->drupalLogin($this->accessUser);
-    $this->assertTrue(drupal_valid_path('graphql'), 'User with permission `use graphql_api query` can access /graphql');
+    $this->httpRequest('graphql', 'GET', $this->accessUser);
+    $this->assertResponse('200', 'User with permission `use graphql_api query` can access /graphql');
   }
 
+  public function testGraphQLQueryNode() {
+    $response = $this->httpRequest('graphql', 'POST', $this->accessUser, [
+      'query' => file_get_contents(__DIR__ . '/fixtures/queryNodeWithAuthor.graphql'),
+    ]);
+    $this->assertResponse('200', 'HTTP response code is correct.');
+    $this->assertEqual(curl_getinfo($this->curlHandle, CURLINFO_CONTENT_TYPE), 'application/json', 'HTTP content type is correct.');
+    $result = drupal_json_decode($response);
+    $this->assertEqual($result['data']['node'][0]['title'], $this->node->title, 'Node title is valid.');
+    $this->assertEqual($result['data']['node'][0]['author']['name'], $this->accessUser->name, 'Author name is valid.');
+  }
+
+  public function testGraphQLQueryNodeWithTag() {
+    $response = $this->httpRequest('graphql', 'POST', $this->accessUser, [
+      'query' => file_get_contents(__DIR__ . '/fixtures/queryNodeWithTags.graphql'),
+      'variables' => drupal_json_encode([
+        'nid' => $this->nodeWithTags->nid
+      ])
+    ]);
+    $this->assertEqual(curl_getinfo($this->curlHandle, CURLINFO_CONTENT_TYPE), 'application/json', 'HTTP content type is correct.');
+    $result = drupal_json_decode($response);
+    $this->assertEqual($result['data']['node__article'][0]['title'], $this->nodeWithTags->title, 'Node title is valid.');
+    $this->assertEqual($result['data']['node__article'][0]['field_tags'][0]['name'], $this->tag->name, 'Tag is valid.');
+  }
+
+  /**
+   * Helper function to issue a HTTP request with simpletest's cURL.
+   *
+   * @param $url
+   * @param $method
+   * @param null $account
+   * @param null $body
+   *   Either the body for POST and PUT or additional URL parameters for GET.
+   * @param string $format
+   * @return string
+   */
+  protected function httpRequest($url, $method, $account = NULL, $body = NULL, $format = 'json') {
+    if (isset($account)) {
+      unset($this->curlHandle);
+      $this->drupalLogin($account);
+    }
+
+    switch ($method) {
+      case 'GET':
+        // Set query if there are addition GET parameters.
+        $options = isset($body) ? array('absolute' => TRUE, 'query' => $body) : array('absolute' => TRUE);
+        $curl_options = array(
+          CURLOPT_HTTPGET => TRUE,
+          CURLOPT_URL => url($url, $options),
+          CURLOPT_NOBODY => FALSE,
+        );
+        break;
+
+      case 'POST':
+        $curl_options = array(
+          CURLOPT_HTTPGET => FALSE,
+          CURLOPT_POST => TRUE,
+          CURLOPT_POSTFIELDS => $body,
+          CURLOPT_URL => url($url, array('absolute' => TRUE)),
+          CURLOPT_NOBODY => FALSE
+        );
+        break;
+
+      case 'PUT':
+        $curl_options = array(
+          CURLOPT_HTTPGET => FALSE,
+          CURLOPT_CUSTOMREQUEST => 'PUT',
+          CURLOPT_POSTFIELDS => $body,
+          CURLOPT_URL => url($url, array('absolute' => TRUE)),
+          CURLOPT_NOBODY => FALSE
+        );
+        break;
+
+      case 'DELETE':
+        $curl_options = array(
+          CURLOPT_HTTPGET => FALSE,
+          CURLOPT_CUSTOMREQUEST => 'DELETE',
+          CURLOPT_URL => url($url, array('absolute' => TRUE)),
+          CURLOPT_NOBODY => FALSE,
+        );
+        break;
+    }
+
+    $response = $this->curlExec($curl_options);
+    $headers = $this->drupalGetHeaders();
+    $headers = implode("\n", $headers);
+    $code = curl_getinfo($this->curlHandle, CURLINFO_HTTP_CODE);
+    $this->verbose($method . ' request to: ' . $url .
+      '<hr />Code: ' . $code .
+      '<hr />Response headers: ' . $headers .
+      '<hr />Response body: ' . $response);
+
+    return $response;
+  }
+
+  /**
+   * Create term
+   *
+   * @param $vocabulary
+   * @return \stdClass
+   */
+  function createTerm($vocabulary) {
+    $term = new stdClass();
+    $term->name = $this->randomName();
+    $term->description = $this->randomName();
+    // Use the first available text format.
+    $term->format = db_query_range('SELECT format FROM {filter_format}', 0, 1)->fetchField();
+    if (is_string($vocabulary)) {
+      $vocabulary = taxonomy_vocabulary_machine_name_load($vocabulary);
+    }
+    $term->vid = $vocabulary->vid;
+    taxonomy_term_save($term);
+    return $term;
+  }
 }
