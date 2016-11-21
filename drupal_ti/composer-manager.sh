@@ -7,13 +7,16 @@ set -e $DRUPAL_TI_DEBUG
 drupal_ti_ensure_drupal
 
 cd "$DRUPAL_TI_DRUPAL_DIR"
+mkdir -p sites/default/files
 
 drush dl composer_manager --yes
 
 # Temporary prevent composer auto download composer command
 drush vset composer_manager_autobuild_packages 0
 
-drush pm-enable composer_manager --yes
+drush en composer_manager --yes
+drush composer-rebuild
 
-# Let's composer_manager auto download deps package
-drush vset composer_manager_autobuild_packages 1
+pushd sites/default/files/composer
+composer require webonyx/graphql-php
+popd
