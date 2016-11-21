@@ -11,7 +11,7 @@ language: php
 sudo: false
 
 php:
-  - 5.3
+  #- 5.3
   - 5.4
   - 5.5
   - 5.6
@@ -31,7 +31,7 @@ env:
 
     # Configuration variables.
     - DRUPAL_TI_MODULE_NAME="graphql_api"
-    - DRUPAL_TI_SIMPLETEST_GROUP="Graphql_API_Test"
+    - DRUPAL_TI_SIMPLETEST_GROUP="GraphQL API"
 
     # Define runners and environment vars to include before and after the
     # main runners / environment vars.
