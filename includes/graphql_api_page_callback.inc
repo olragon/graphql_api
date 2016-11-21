@@ -6,9 +6,10 @@ use GraphQL\GraphQL;
  * Page callback for /graphql
  */
 function graphql_api_page_callback() {
+  $variables = [];
   if (isset($_SERVER['CONTENT_TYPE']) && strpos(strtolower($_SERVER['CONTENT_TYPE']), 'application/json') > -1) {
     $rawBody = file_get_contents('php://input');
-    $data = json_decode($rawBody ?: '', true);
+    $data = drupal_json_decode($rawBody ?: '');
   } else {
     $data = $_POST;
   }
@@ -16,7 +17,13 @@ function graphql_api_page_callback() {
   if (!empty($data)) {
     if (empty($data['variables'])) {
       $data['variables'] = [];
+    } else {
+      $data['variables'] = drupal_json_decode($data['variables']);
     }
+  }
+
+  if (empty($data['query'])) {
+    $data['query'] = file_get_contents(__DIR__ . '/../tests/fixtures/instrospec.graphql');
   }
 
   $requestString = isset($data['query']) ? $data['query'] : null;

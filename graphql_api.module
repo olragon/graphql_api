@@ -41,11 +41,13 @@ function graphql_api_permission() {
  * @return array|mixed
  */
 function graphql_api_info() {
-  $info = [];
+  $info = [
+    'types' => []
+  ];
   foreach (module_list() as $module => $module_info) {
     if (module_load_include('inc', $module, $module.'.graphql')) {
       foreach (module_implements('graphql_api_info') as $module) {
-        $info += module_invoke($module, 'graphql_api_info');
+        $info = array_merge_recursive(module_invoke($module, 'graphql_api_info'), $info);
       }
     }
   }

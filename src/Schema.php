@@ -5,8 +5,10 @@ use GraphQL\Error\Error;
 use GraphQL\Type\Definition\InterfaceType;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Definition\ObjectType;
+use GraphQL\Type\Definition\IDType;
 use GraphQL\Schema as GraphQLSchema;
 use GraphQL\Type\Definition\ResolveInfo;
+use GraphQL\Type\Definition\UnionType;
 
 class Schema {
 
@@ -19,6 +21,8 @@ class Schema {
     foreach ($this->graphqlInfo['types'] as $type => $type_info) {
       if (is_callable($type_info)) {
         $this->objectTypes[$type] = call_user_func($type_info);
+      } else {
+        $this->objectTypes[$type] = $type_info;
       }
     }
   }
@@ -60,87 +64,51 @@ class Schema {
     $self = $this;
     $entity_types = $this->getEntityInfo();
 
-    $graphData = [
-      'interfaces' => [],
-      'objects' => []
-    ];
     foreach ($entity_types as $entity_type => $entity_type_info) {
-      $fields = $this->getFields($entity_type);
-      if (empty($fields)) continue;
-
       // define interface
-      $graphData['interfaces'][$entity_type] = [
-        'name' => $entity_type,
-        'description' => isset($entity_type_info['description']) ? $entity_type_info['description'] : '',
-        'fields' => [],
-        'resolveType' => function ($obj) use($entity_type, &$self) {
-          list($id, $rid, $bundle) = entity_extract_ids($entity_type, $obj);
-          $objectType = $self->objectTypes[str_replace('-', '_', $entity_type .'__'. $bundle)];
-          return $objectType;
-        },
-        '__entity_bundle' => null,
-        '__entity_type' => $entity_type
-      ];
-
-      // define object
-      foreach ($entity_type_info['bundles'] as $bundle => $bundle_info) {
-        $machine_name = str_replace('-', '_', "{$entity_type}__{$bundle}");
-        $fields = $this->getFields($entity_type, $bundle);
-        if (empty($fields)) continue;
-
-        $graphData['objects'][$machine_name] = [
-          'name' => $machine_name,
-          'description' => '',
-          'fields' => [],
-          'interfaces' => [],
-          '__entity_bundle' => $bundle,
-          '__entity_type' => $entity_type
-        ];
-      }
-    }
-
-    foreach ($graphData['interfaces'] as $key => $item) {
-      $fields = $this->getFields($item['__entity_type'], $item['__entity_bundle']);
-      $this->addInterfaceType($key, ['fields' => $fields] + $item);
-    }
-
-    foreach ($graphData['objects'] as $key => $item) {
-      $type = $item['__entity_type'];
-      $bundle = $item['__entity_bundle'];
-      $fields = $this->getFields($type, $bundle);
-      $this->addObjectType($key, ['fields' => $fields, 'interfaces' => [$this->interfaceTypes[$type]]] + $item);
+      $this->addEntityGqlDefinition($entity_type);
     }
 
     $queryTypeInfo = ['name' => 'Query'];
     foreach ($this->interfaceTypes as $type => $interface) {
+      if (!isset($interface->config['__entity_type'])) {
+        continue;
+      }
       $queryTypeInfo['fields'][$type] = [
-        'type' => $interface,
-        'args' => [
-          'id' => [
-            'name' => 'id',
-            'description' => 'id of ' . $type,
-            'type' => Type::string()
-          ]
-        ],
-        'resolve' => function ($root, $args) {
-          return [];
+        'type' => Type::listOf($interface),
+        'args' => $this->entityToGqlQueryArg($interface->config['__entity_type']),
+        'resolve' => function ($root, $args) use ($type) {
+          $op = 'view';
+          $query = graphql_api_entity_get_query($type, $args);
+          $query->range(0, 30);
+          $result = $query->execute();
+          if (!empty($result[$type])) {
+            $entities = entity_load($type, array_keys($result[$type]));
+            $entities = array_filter($entities, function ($entity) use($op, $type) {
+              return entity_access($op, $type, $entity);
+            });
+            return $entities;
+          }
         },
       ];
     }
 
     foreach ($this->objectTypes as $type => $object) {
+      if (!isset($object->config['__entity_type']) || !isset($object->config['__entity_bundle'])) {
+        continue;
+      }
       $queryTypeInfo['fields'][$type] = [
         'type' => Type::listOf($object),
-        'args' => [
-          'id' => [
-            'name' => 'id',
-            'description' => 'id of ' . $type,
-            'type' => Type::string()
-          ]
-        ],
-        'resolve' => function ($root, $args) use ($object) {
+        'args' => $this->entityToGqlQueryArg($object->config['__entity_type'], $object->config['__entity_bundle']),
+        'resolve' => function ($root, $args) use ($object, $self) {
           $type = $object->config['__entity_type'];
           $bundle = $object->config['__entity_bundle'];
+          $info = $self->getEntityInfo($type);
+
+          if (isset($info['entity keys']['bundle']) && !isset($args[$info['entity keys']['bundle']])) {
+            $args[$info['entity keys']['bundle']] = $bundle;
+          }
+
           $op = 'view';
           $query = graphql_api_entity_get_query($type, $args);
           $query->range(0, 30);
@@ -168,10 +136,79 @@ class Schema {
 
       // We need to pass the types that implement interfaces in case the types are only created on demand.
       // This ensures that they are available during query validation phase for interfaces.
-      'types' => $this->objectTypes + $this->interfaceTypes
+      'types' => array_merge($this->objectTypes + $this->interfaceTypes)
     ]);
 
     return $schema;
+  }
+
+  public function entityToGqlQueryArg($entity_type, $bundle = NULL) {
+    $fields = $this->getFields($entity_type, $bundle);
+    $args = [];
+    foreach ($fields as $field => $field_info) {
+      if (!($field_info['type'] instanceof ObjectType) && !($field_info['type'] instanceof InterfaceType)) {
+
+        // convert ID to int
+        if ($field_info['type'] instanceof IDType) {
+          $field_info['type'] = Type::int();
+        }
+
+        if (in_array($field, $this->getEntityInfo($entity_type)['schema_fields_sql']['base table'])) {
+          $args[$field] = $field_info;
+        }
+      }
+    }
+    return $args;
+  }
+
+  /**
+   * Drupal entity_type to graphql interface, objects
+   *
+   * @param $entity_type
+   * @return array
+   */
+  public function addEntityGqlDefinition($entity_type) {
+    $self = $this;
+    $entity_type_info = $this->getEntityInfo($entity_type);
+    $defs = [
+      'interface' => NULL,
+      'objects' => []
+    ];
+
+    if (!isset($this->interfaceTypes[$entity_type])) {
+      $defs['interface'] = $this->addInterfaceType($entity_type, [
+        'name' => $entity_type,
+        'description' => isset($entity_type_info['description']) ? $entity_type_info['description'] : '',
+        'fields' => $this->getFields($entity_type),
+        'resolveType' => function ($obj) use($entity_type, &$self) {
+          list($id, $rid, $bundle) = entity_extract_ids($entity_type, $obj);
+          $objectType = $self->objectTypes[str_replace('-', '_', $entity_type .'__'. $bundle)];
+          return $objectType;
+        },
+        '__entity_bundle' => null,
+        '__entity_type' => $entity_type
+      ]);
+    } else {
+      $defs['interface'] = $this->interfaceTypes[$entity_type];
+    }
+
+    foreach ($entity_type_info['bundles'] as $bundle => $bundle_info) {
+      $machine_name = str_replace('-', '_', "{$entity_type}__{$bundle}");
+      if (!isset($this->objectTypes[$machine_name])) {
+        $defs['objects'][$machine_name] = $this->addObjectType($machine_name, [
+          'name' => $machine_name,
+          'description' => '',
+          'fields' => $this->getFields($entity_type, $bundle),
+          'interfaces' => [$this->interfaceTypes[$entity_type]],
+          '__entity_bundle' => $bundle,
+          '__entity_type' => $entity_type
+        ]);
+      } else {
+        $defs['objects'][$machine_name] = $this->objectTypes[$machine_name];
+      }
+    }
+
+    return $defs;
   }
 
   /**
@@ -179,9 +216,11 @@ class Schema {
    *
    * @param $name
    * @param $info
+   * @return mixed
    */
   public function addInterfaceType($name, $info) {
     $this->interfaceTypes[$name] = new InterfaceType($info);
+    return $this->interfaceTypes[$name];
   }
 
   /**
@@ -189,9 +228,11 @@ class Schema {
    *
    * @param $name
    * @param $info
+   * @return mixed
    */
   public function addObjectType($name, $info) {
     $this->objectTypes[$name] = new ObjectType($info);
+    return $this->objectTypes[$name];
   }
 
   /**
@@ -214,7 +255,12 @@ class Schema {
       if (!$fieldType) continue;
       $fields[$property] = [
         'type' => $fieldType,
-        'description' => isset($info['description']) ? $info['description'] : ''
+        'description' => isset($info['description']) ? $info['description'] : '',
+        'resolve' => function ($value, $args, $context, ResolveInfo $info) use ($entity_type, $bundle, $property) {
+          $wrap = entity_metadata_wrapper($entity_type, $value);
+          $items = $wrap->{$property}->value();
+          return $items;
+        }
       ];
       if (in_array($property, [$entity_keys['id'], $entity_keys['revision']])) {
         $fields[$property]['type'] = Type::id();
@@ -229,7 +275,8 @@ class Schema {
           'type' => $fieldType,
           'description' => $field_info['description'],
           'resolve' => function ($value, $args, $context, ResolveInfo $info) use ($entity_type, $bundle, $field) {
-            $items = $value->wrapper()->{$field}->value();
+            $wrap = entity_metadata_wrapper($entity_type, $value);
+            $items = $wrap->{$field}->value();
             return $items;
           }
         ];
@@ -240,7 +287,7 @@ class Schema {
   }
 
   /**
-   *
+   * Convert entity metadata 'list<>' -> Type::listOf()
    *
    * @param $drupalType
    * @param array $context
@@ -252,9 +299,8 @@ class Schema {
       $matchType = $matches[1];
       if ($gqlType = $this->drupalToGqlFieldType($matchType, $context)) {
         return Type::listOf($gqlType);
-      }
-      if (isset($this->interfaceTypes[$matchType])) {
-        return Type::listOf($this->interfaceTypes[$matchType]);
+      } else {
+        throw new Error("Cannot convert {$drupalType} to GraphQL type." . print_r($context, TRUE));
       }
     }
 
@@ -267,8 +313,10 @@ class Schema {
    * @param $drupalType
    * @param array $context
    * @return bool|\Closure|\GraphQL\Type\Definition\BooleanType|\GraphQL\Type\Definition\FloatType|\GraphQL\Type\Definition\IntType|\GraphQL\Type\Definition\ListOfType|\GraphQL\Type\Definition\StringType|mixed
+   * @throws \GraphQL\Error\Error
    */
   public function drupalToGqlFieldType($drupalType, $context = []) {
+    $self = $this;
     // check custom types
     switch ($drupalType) {
       case 'text':
@@ -291,10 +339,13 @@ class Schema {
           return $this->interfaceTypes[$drupalType];
         } else if (isset($this->objectTypes[$drupalType])) {
           return $this->objectTypes[$drupalType];
-        } else if(isset($context['info']['type'])) {
-          return $this->gqlFieldType($context['info']['type']);
+        } else if ($this->getEntityInfo($drupalType)) {
+          return function () use ($drupalType, $self) {
+            $interface = $self->addEntityGqlDefinition($drupalType)['interface'];
+            return $interface;
+          };
         }
-        return false;
+        throw new Error("Cannot convert {$drupalType} to GraphQL type." . print_r($context, TRUE));
     }
   }
 
