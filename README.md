@@ -3,6 +3,8 @@ GraphQL API for Drupal 7
 
 [![Build Status](https://travis-ci.org/olragon/graphql_api.svg?branch=master)](https://travis-ci.org/olragon/graphql_api)
 
+![GraphQL API with GraphiQL](/screenshot.png?raw=true "GraphQL API with GraphiQL")
+
 The problems
 ------------
 
@@ -41,8 +43,17 @@ The plans
         - Field API: entityreference -> Interface/Object target entity
         - Field API: relation -> Interface/Object target entity
 3. Create GraphQL endpoint `/graphql`
-    - receive POST content with GrapQL query and variables
-    - execute query and return result
+    - receive POST content with GraphQL query and variables
+    - query using Drupal's `EntityFieldQuery`
+    - check entity access using `entity_access`
+    - resolve property using `entity_metadata_wrapper`
+    - return result
 
   [GraphQL]: https://www.drupal.org/project/graphql "GraphQL module"
   [https://chrome.google.com/webstore/detail/graphiql-feen/mcbfdonlkfpbfdpi…]: https://chrome.google.com/webstore/detail/graphiql-feen/mcbfdonlkfpbfdpimkjilhdneikhfklp
+
+Notes
+-----
+
+1. Field will be shortened `field_tags` -> `tags`
+2. If entity type have single bundle, we skip GraphQL interface and just use GraphQL object. Eg: user, file, ...

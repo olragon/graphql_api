@@ -8,7 +8,6 @@ use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\IDType;
 use GraphQL\Schema as GraphQLSchema;
 use GraphQL\Type\Definition\ResolveInfo;
-use GraphQL\Type\Definition\UnionType;
 
 class Schema {
 
@@ -170,42 +169,53 @@ class Schema {
   public function addEntityGqlDefinition($entity_type) {
     $self = $this;
     $entity_type_info = $this->getEntityInfo($entity_type);
+    $isSingleBundle = FALSE;
     $defs = [
       'interface' => NULL,
       'objects' => []
     ];
 
-    if (!isset($this->interfaceTypes[$entity_type])) {
-      $defs['interface'] = $this->addInterfaceType($entity_type, [
-        'name' => $entity_type,
-        'description' => isset($entity_type_info['description']) ? $entity_type_info['description'] : '',
-        'fields' => $this->getFields($entity_type),
-        'resolveType' => function ($obj) use($entity_type, &$self) {
-          list($id, $rid, $bundle) = entity_extract_ids($entity_type, $obj);
-          $objectType = $self->objectTypes[str_replace('-', '_', $entity_type .'__'. $bundle)];
-          return $objectType;
-        },
-        '__entity_bundle' => null,
-        '__entity_type' => $entity_type
-      ]);
-    } else {
-      $defs['interface'] = $this->interfaceTypes[$entity_type];
+    if (count($entity_type_info['bundles']) === 1 && key($entity_type_info['bundles']) === $entity_type) {
+      $isSingleBundle = TRUE;
     }
 
+    if (!$isSingleBundle) {
+      if (!isset($this->interfaceTypes[$entity_type])) {
+        $defs['interface'] = $this->addInterfaceType($entity_type, [
+          'name' => $entity_type,
+          'description' => isset($entity_type_info['description']) ? $entity_type_info['description'] : '',
+          'fields' => $this->getFields($entity_type),
+          'resolveType' => function ($obj) use($entity_type, &$self) {
+            list($id, $rid, $bundle) = entity_extract_ids($entity_type, $obj);
+            $objectType = $self->objectTypes[$bundle];
+            return $objectType;
+          },
+          '__entity_bundle' => null,
+          '__entity_type' => $entity_type
+        ]);
+      } else {
+        $defs['interface'] = $this->interfaceTypes[$entity_type];
+      }
+    }
+
+    // entity have single bundle: user, taxonomy_vocabulary, file
     foreach ($entity_type_info['bundles'] as $bundle => $bundle_info) {
-      $machine_name = str_replace('-', '_', "{$entity_type}__{$bundle}");
-      if (!isset($this->objectTypes[$machine_name])) {
-        $defs['objects'][$machine_name] = $this->addObjectType($machine_name, [
-          'name' => $machine_name,
+      if (!isset($this->objectTypes[$bundle])) {
+        $defs['objects'][$bundle] = $this->addObjectType($bundle, [
+          'name' => $bundle,
           'description' => '',
           'fields' => $this->getFields($entity_type, $bundle),
-          'interfaces' => [$this->interfaceTypes[$entity_type]],
+          'interfaces' => $isSingleBundle ? [] : [$this->interfaceTypes[$entity_type]],
           '__entity_bundle' => $bundle,
           '__entity_type' => $entity_type
         ]);
       } else {
-        $defs['objects'][$machine_name] = $this->objectTypes[$machine_name];
+        $defs['objects'][$bundle] = $this->objectTypes[$bundle];
       }
+    }
+
+    if ($isSingleBundle) {
+      $defs['interface'] = reset($defs['objects']);
     }
 
     return $defs;
@@ -270,8 +280,15 @@ class Schema {
     if ($bundle && !empty($properties_info['bundles'][$bundle])) {
       foreach ($properties_info['bundles'][$bundle]['properties'] as $field => $field_info) {
         $fieldType = $this->gqlFieldType($field_info['type'], ['entity_type' => $entity_type, 'bundle' => $bundle, 'property' => $field, 'info' => $field_info]);
-        if (!$fieldType) continue;
-        $fields[$field] = [
+        if (!$fieldType) {
+          throw new Error("Cannot detect field type of {$field}");
+        }
+        $short_field = preg_replace('/^field_/', '', $field);
+        if (isset($fields[$short_field])) {
+          $short_field = $field;
+        }
+
+        $fields[$short_field] = [
           'type' => $fieldType,
           'description' => $field_info['description'],
           'resolve' => function ($value, $args, $context, ResolveInfo $info) use ($entity_type, $bundle, $field) {

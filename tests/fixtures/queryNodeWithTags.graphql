@@ -1,8 +1,8 @@
 query nodeWithTags($nid: Int) {
-    node__article (nid: $nid) {
+    article (nid: $nid) {
         nid,
         title,
-        field_tags {
+        tags {
             name
         }
     }

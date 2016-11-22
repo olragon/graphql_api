@@ -66,8 +66,8 @@ class Graphql_API_Test extends DrupalWebTestCase {
     ]);
     $this->assertEqual(curl_getinfo($this->curlHandle, CURLINFO_CONTENT_TYPE), 'application/json', 'HTTP content type is correct.');
     $result = drupal_json_decode($response);
-    $this->assertEqual($result['data']['node__article'][0]['title'], $this->nodeWithTags->title, 'Node title is valid.');
-    $this->assertEqual($result['data']['node__article'][0]['field_tags'][0]['name'], $this->tag->name, 'Tag is valid.');
+    $this->assertEqual($result['data']['article'][0]['title'], $this->nodeWithTags->title, 'Node title is valid.');
+    $this->assertEqual($result['data']['article'][0]['tags'][0]['name'], $this->tag->name, 'Tag is valid.');
   }
 
   /**
