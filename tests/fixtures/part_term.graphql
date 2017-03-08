@@ -1,0 +1,13 @@
+{
+    a_item__inventory_part (id: "23") {
+        number,
+        title,
+        description,
+        published,
+        uid,
+        field_inventory_item_category {
+            tid,
+            name
+        }
+    }
+}

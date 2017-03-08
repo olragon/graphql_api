@@ -1,0 +1,7 @@
+{
+    taxonomy_term__item_category {
+        tid,
+        name,
+        weight
+    }
+}

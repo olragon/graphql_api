@@ -1,0 +1,9 @@
+{
+    a_task__default (id: "35552") {
+        number,
+        field_task_cost {
+            amount_decimal,
+            currency_code
+        }
+    }
+}

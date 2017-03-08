@@ -1,4 +1,7 @@
 <?php
+use Drupal\graphql_api\Schema;
+use GraphQL\GraphQL;
+
 /**
  * @file
  */
@@ -16,11 +19,28 @@ function graphql_api_menu() {
     'page callback' => 'graphql_api_page_callback',
     'page arguments' => [],
     'access arguments' => ['use graphql_api query'],
+    'access callback' => 'graphql_api_access_callback',
     'file path' => GRAPHQL_API_PATH . '/includes',
     'file' => 'graphql_api_page_callback.inc'
   ];
 
+  $items['graphqleditor'] = [
+    'title' => 'GraphiQL',
+    'page callback' => 'graphql_api_graphqleditor_callback',
+    'page arguments' => [],
+    'access arguments' => ['use graphql_api query'],
+    'file path' => GRAPHQL_API_PATH . '/includes',
+    'file' => 'graphql_api_graphqleditor_callback.inc'
+  ];
+
   return $items;
+}
+
+function graphql_api_access_callback($perm) {
+  if (!empty($_SERVER['HTTP_GRAPHQL_TOKEN']) && $_SERVER['HTTP_GRAPHQL_TOKEN'] === variable_get('graphql_token', 'graphql_private_token')) {
+    return TRUE;
+  }
+  return user_access($perm);
 }
 
 /**
@@ -41,16 +61,10 @@ function graphql_api_permission() {
  * @return array|mixed
  */
 function graphql_api_info() {
-  $info = [
-    'types' => []
-  ];
   foreach (module_list() as $module => $module_info) {
-    if (module_load_include('inc', $module, $module.'.graphql')) {
-      foreach (module_implements('graphql_api_info') as $module) {
-        $info = array_merge_recursive(module_invoke($module, 'graphql_api_info'), $info);
-      }
-    }
+    module_load_include('inc', $module, $module.'.graphql');
   }
+  $info = module_invoke_all('graphql_api_info');
   drupal_alter('graphql_api_info', $info);
   return $info;
 }
@@ -81,6 +95,12 @@ function graphql_api_entity_get_query($entity_type, $conditions = []) {
   }
 
   $query = new EntityFieldQuery();
+
+  $deleted_key = isset($info['entity keys']['deleted']) ? $info['entity keys']['deleted'] : null;
+  if ($deleted_key && !isset($conditions[$deleted_key])) {
+    $query->propertyCondition($deleted_key, 0);
+  }
+
   $query->entityCondition('entity_type', $entity_type);
   foreach ($conditions as $prop => $val) {
     if (in_array($prop, $info['schema_fields_sql']['base table'])) {
@@ -94,4 +114,30 @@ function graphql_api_entity_get_query($entity_type, $conditions = []) {
   }
 
   return $query;
+}
+
+/**
+ * Execute query in file
+ */
+function graphql_api_query_file($file, $args = []) {
+  $query_task = file_get_contents($file);
+  $shema = new Schema();
+  $schema_build = $shema->build();
+  $task_form_data = GraphQL::execute(
+    $schema_build,
+    $query_task,
+    null,
+    null,
+    $args
+  );
+  return $task_form_data;
+}
+
+/**
+ * Symfony VarDumper fallback
+ */
+if (!function_exists('dump')) {
+  function dump() {
+    return call_user_func_array('var_dump', func_get_args());
+  }
 }
