@@ -72,6 +72,52 @@ function graphql_api_graphql_api_info() {
           ]
         ]
       ]),
+      'socialfield' => new ObjectType([
+        'name' => 'socialfield',
+        'fields' => [
+          'service' => [
+            'type' => Type::string(),
+            'description' => t('Service')
+          ],
+          'url' => [
+            'type' => Type::string(),
+            'description' => t('URL')
+          ],
+          'weight' => [
+            'type' => Type::int(),
+            'description' => t('Weight')
+          ]
+        ]
+      ]),
+      'field_item_name' => new ObjectType([
+        'name' => 'field_item_name',
+        'fields' => [
+          'title' => [
+            'type' => Type::string(),
+            'description' => t('The title of the name.')
+          ],
+          'given' => [
+            'type' => Type::string(),
+            'description' => t('The given name.')
+          ],
+          'middle' => [
+            'type' => Type::string(),
+            'description' => t('The middle of the name.')
+          ],
+          'family' => [
+            'type' => Type::string(),
+            'description' => t('The family of the name.')
+          ],
+          'generational' => [
+            'type' => Type::string(),
+            'description' => t('The generational of the name.')
+          ],
+          'credentials' => [
+            'type' => Type::string(),
+            'description' => t('The credentials of the name.')
+          ]
+        ]
+      ])
     ]
   ];
 }
