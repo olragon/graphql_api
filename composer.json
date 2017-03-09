@@ -7,7 +7,6 @@
         }
     ],
     "require": {
-        "webonyx/graphql-php": "dev-master",
-        "youshido/graphql": "^1.2"
+        "webonyx/graphql-php": "dev-master"
     }
 }
