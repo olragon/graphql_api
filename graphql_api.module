@@ -121,7 +121,7 @@ function graphql_api_entity_get_query($entity_type, $conditions = []) {
  */
 function graphql_api_query_file($file, $args = []) {
   $query_task = file_get_contents($file);
-  $shema = new Schema();
+  $shema = graphql_api();
   $schema_build = $shema->build();
   $data = GraphQL::execute(
     $schema_build,
@@ -140,4 +140,14 @@ if (!function_exists('dump')) {
   function dump() {
     return call_user_func_array('var_dump', func_get_args());
   }
+}
+
+/**
+ * Get Schema builder
+ */
+function graphql_api() {
+  if (!$obj = &drupal_static(__FUNCTION__)) {
+    $obj = new Schema;
+  }
+  return $obj;
 }

@@ -36,7 +36,7 @@ function graphql_api_page_callback() {
       $result = $cache->data;
     } else {
       // Define your schema:
-      $schemaBuilder = new Schema;
+      $schemaBuilder = graphql_api();
       $schema = $schemaBuilder->build();
 
       $result = GraphQL::execute(
@@ -53,7 +53,6 @@ function graphql_api_page_callback() {
         $result['errors'] += $schemaBuilder->errors;
         $result['errors'] = array_unique($result['errors']);
       }
-
 
       if ($is_introspec) {
         cache_set('graphql_api_introspec', $result);

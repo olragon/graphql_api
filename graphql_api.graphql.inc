@@ -32,47 +32,45 @@ function graphql_api_graphql_api_info() {
       ]),
       'field_item_file' => new ObjectType([
         'name' => 'field_item_file',
-        'fields' => [
-          'file' => [
-            'type' => Type::string(),
-            'description' => t('File')
-          ],
-          'description' => [
-            'type' => Type::string(),
-            'description' => t('Alt')
-          ],
-          'display' => [
-            'type' => Type::string(),
-            'description' => t('Display')
-          ]
-        ]
+        'fields' => function () {
+          $schema = graphql_api();
+          return $schema->getInterfaceType('file')->getFields() + [
+            'description' => [
+              'type' => Type::string(),
+              'description' => t('Alt')
+            ],
+            'display' => [
+              'type' => Type::string(),
+              'description' => t('Display')
+            ]
+          ];
+        }
       ]),
       'field_item_image' => new ObjectType([
         'name' => 'field_item_image',
-        'fields' => [
-          'file' => [
-            'type' => Type::string(),
-            'description' => t('File')
-          ],
-          'description' => [
-            'type' => Type::string(),
-            'description' => t('Alt')
-          ],
-          'display' => [
-            'type' => Type::string(),
-            'description' => t('Display')
-          ],
-          'alt' => [
-            'type' => Type::string(),
-            'description' => t('Alt')
-          ],
-          'title' => [
-            'type' => Type::string(),
-            'description' => t('Title')
-          ]
-        ]
+        'fields' => function () {
+          $schema = graphql_api();
+          return $schema->getInterfaceType('file')->getFields() + [
+            'description' => [
+              'type' => Type::string(),
+              'description' => t('Alt')
+            ],
+            'display' => [
+              'type' => Type::string(),
+              'description' => t('Display')
+            ],
+            'alt' => [
+              'type' => Type::string(),
+              'description' => t('Alt')
+            ],
+            'title' => [
+              'type' => Type::string(),
+              'description' => t('Title')
+            ]
+          ];
+        }
       ]),
-      'socialfield' => new ObjectType([
+      'socialfield' => Type::listOf(new ObjectType([
         'name' => 'socialfield',
         'fields' => [
           'service' => [
@@ -88,7 +86,7 @@ function graphql_api_graphql_api_info() {
             'description' => t('Weight')
           ]
         ]
-      ]),
+      ])),
       'field_item_name' => new ObjectType([
         'name' => 'field_item_name',
         'fields' => [
