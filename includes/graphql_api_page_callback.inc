@@ -49,9 +49,7 @@ function graphql_api_page_callback() {
       );
       
       if (!empty($schemaBuilder->errors)) {
-        $result['errors'] = isset($result['errors']) ? $result['errors'] : [];
-        $result['errors'] += $schemaBuilder->errors;
-        $result['errors'] = array_unique($result['errors']);
+        $result['schema_errors'] = $schemaBuilder->errors;
       }
 
       if ($is_introspec) {
@@ -65,7 +63,7 @@ function graphql_api_page_callback() {
       ]
     ];
   }
-
+  
   drupal_json_output($result);
   exit;
 }
