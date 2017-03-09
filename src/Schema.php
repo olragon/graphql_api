@@ -314,7 +314,7 @@ class Schema {
         if ($field_info['type'] instanceof ListOfType) {
           if (isset($this->objectTypes[$field])) {
             $field_info['type'] = $this->objectTypes[$field];
-          }     
+          }
           else {
             if (!($field_info['type']->ofType instanceof \Closure) && !($field_info['type']->ofType instanceof InterfaceType)) {
               $args[$field] = [
@@ -505,39 +505,41 @@ class Schema {
 
       $entity_info = $this->getEntityInfo($entity_type);
       $entity_keys = $entity_info['entity keys'];
-      foreach ($properties_info['properties'] as $property => $info) {
-        $fieldType = isset($info['type']) ? $this->gqlFieldType($info['type'], [
-          'entity_type' => $entity_type,
-          'bundle' => NULL,
-          'property' => $property,
-          'info' => $info
-        ]) : Type::string();
+      if ($properties_info['properties']) {
+        foreach ($properties_info['properties'] as $property => $info) {
+          $fieldType = isset($info['type']) ? $this->gqlFieldType($info['type'], [
+            'entity_type' => $entity_type,
+            'bundle' => NULL,
+            'property' => $property,
+            'info' => $info
+          ]) : Type::string();
 
-        if (!$fieldType) {
-          // dump($info);
-          // die("Cannot detect fieldType for {$entity_type} {$property}");
-          $this->addError("Cannot detect fieldType for {$entity_type} {$property}");
-          continue;
-        }
-
-        $fields[$property] = [
-          'type' => $fieldType,
-          'description' => isset($info['description']) ? $info['description'] : '',
-          'resolve' => function ($value, $args, $context, ResolveInfo $info) use ($entity_type, $bundle, $property) {
-            if (isset($value->wrapper)) {
-              $wrap = $value->wrapper();
-            } else {
-              $wrap = entity_metadata_wrapper($entity_type, $value);
-            }
-            $items = $wrap->{$property}->value();
-            return $items;
+          if (!$fieldType) {
+            // dump($info);
+            // die("Cannot detect fieldType for {$entity_type} {$property}");
+            $this->addError("Cannot detect fieldType for {$entity_type} {$property}");
+            continue;
           }
-        ];
-        if (in_array($property, [
-          $entity_keys['id'],
-          $entity_keys['revision']
-        ])) {
-          $fields[$property]['type'] = Type::id();
+
+          $fields[$property] = [
+            'type' => $fieldType,
+            'description' => isset($info['description']) ? $info['description'] : '',
+            'resolve' => function ($value, $args, $context, ResolveInfo $info) use ($entity_type, $bundle, $property) {
+              if (isset($value->wrapper)) {
+                $wrap = $value->wrapper();
+              } else {
+                $wrap = entity_metadata_wrapper($entity_type, $value);
+              }
+              $items = $wrap->{$property}->value();
+              return $items;
+            }
+          ];
+          if (in_array($property, [
+            $entity_keys['id'],
+            $entity_keys['revision']
+          ])) {
+            $fields[$property]['type'] = Type::id();
+          }
         }
       }
 
@@ -581,7 +583,10 @@ class Schema {
                   break;
                 case 'entityreference':
                   $target_type = $field_info['settings']['target_type'];
-                  $target_bundles = array_values($field_info['settings']['handler_settings']['target_bundles']);
+                  $target_bundles = array();
+                  if (is_array($field_info['settings']['handler_settings']['target_bundles'])) {
+                    $target_bundles = array_values($field_info['settings']['handler_settings']['target_bundles']);
+                  }
                   if (empty($target_bundles)) {
                     $target_bundles = array_keys($self->getEntityInfo($target_type)['bundles']);
                   }
