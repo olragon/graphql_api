@@ -123,14 +123,14 @@ function graphql_api_query_file($file, $args = []) {
   $query_task = file_get_contents($file);
   $shema = new Schema();
   $schema_build = $shema->build();
-  $task_form_data = GraphQL::execute(
+  $data = GraphQL::execute(
     $schema_build,
     $query_task,
     null,
     null,
     $args
   );
-  return $task_form_data;
+  return $data;
 }
 
 /**

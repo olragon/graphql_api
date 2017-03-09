@@ -14,6 +14,28 @@ This module attempt bring GraphQL to Drupal 7.
 
 For Drupal 8, you should use <http://drupal.org/project/graphql>
 
+
+Requirements
+------------
+
+- PHP 5.4+
+
+Installation
+------------
+
+- Install `xautoload` http://drupal.org/project/xautoload
+- Install `entity` http://drupal.org/project/entity
+- Install `composer_manager` http://drupal.org/project/composer_manager
+- Install `graphql_api`
+- Update composer requirement's https://www.drupal.org/node/2405805
+
+Usages
+------
+
+- `/graphqleditor` explore your Drupal 7 site's GraphQL schema
+- `/graphql` use your favorite GraphQL client (Apollo http://www.apollodata.com/) to begin query
+- `graphql_api_query_file()` execute .GrahpQL query from file
+
 The tools
 ---------
 
@@ -28,8 +50,8 @@ The tools
 The plans
 ---------
 
-1. Create module graphql\_api
-2. Create class `Drupal\grapql\_api\Schema` to build GraphQL schema
+1. [x] Create module graphql\_api
+2. [x] Create class `Drupal\grapql\_api\Schema` to build GraphQL schema
     - use `hook_entity_info()`, `hook_entity_property_info()` to build GraphQL schema
     - map Drupal concept to GraphQL concept
         - Entity type -> Interface
@@ -42,7 +64,7 @@ The plans
         - Field API: term_reference -> Interface: term
         - Field API: entityreference -> Interface/Object target entity
         - Field API: relation -> Interface/Object target entity
-3. Create GraphQL endpoint `/graphql`
+3. [x] Create GraphQL endpoint `/graphql`
     - receive POST content with GraphQL query and variables
     - query using Drupal's `EntityFieldQuery`
     - check entity access using `entity_access`
@@ -55,5 +77,5 @@ The plans
 Notes
 -----
 
-1. Field will be shortened `field_tags` -> `tags`
-2. If entity type have single bundle, we skip GraphQL interface and just use GraphQL object. Eg: user, file, ...
+1. ~~Field will be shortened `field_tags` -> `tags`~~ Shortened field name can be duplicate with base table's column or other property. Keep field name intact.
+2. ~~If entity type have single bundle, we skip GraphQL interface and just use GraphQL object. Eg: user, file, ...~~ Entity reference field will resolve to Entity type, not bundle.
