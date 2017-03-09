@@ -32,7 +32,7 @@ function graphql_api_page_callback() {
 
   $is_introspec = FALSE;
   try {
-    if ($is_introspec && $cache = cache_get('graphql_api_introspec')) {
+    if ($is_introspec && $cache = cache_get('graphql_api_introspec') && empty($_GET['nocache'])) {
       $result = $cache->data;
     } else {
       // Define your schema:
@@ -47,6 +47,13 @@ function graphql_api_page_callback() {
         $variableValues,
         $operationName
       );
+      
+      if (!empty($schemaBuilder->errors)) {
+        $result['errors'] = isset($result['errors']) ? $result['errors'] : [];
+        $result['errors'] += $schemaBuilder->errors;
+        $result['errors'] = array_unique($result['errors']);
+      }
+
 
       if ($is_introspec) {
         cache_set('graphql_api_introspec', $result);

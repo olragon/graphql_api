@@ -48,7 +48,7 @@ class Schema {
    *
    * @var array
    */
-  private $errors = [];
+  public $errors = [];
 
 
   private $allArgTypes = [];
@@ -314,7 +314,7 @@ class Schema {
         if ($field_info['type'] instanceof ListOfType) {
           if (isset($this->objectTypes[$field])) {
             $field_info['type'] = $this->objectTypes[$field];
-          }
+          }     
           else {
             if (!($field_info['type']->ofType instanceof \Closure) && !($field_info['type']->ofType instanceof InterfaceType)) {
               $args[$field] = [
@@ -322,10 +322,6 @@ class Schema {
                 'name' => $field,
               ];
               $this->allArgTypes[get_class($field_info['type']->ofType)] = get_class($field_info['type']->ofType);
-            }
-            else {
-              $type = get_class($field_info['type']->ofType);
-              $this->addError("Type {$type} cannot be used as args for {$field}");
             }
           }
         }
@@ -518,8 +514,9 @@ class Schema {
         ]) : Type::string();
 
         if (!$fieldType) {
-          dump($info);
-          die("Cannot detect fieldType for {$entity_type} {$property}");
+          // dump($info);
+          // die("Cannot detect fieldType for {$entity_type} {$property}");
+          $this->addError("Cannot detect fieldType for {$entity_type} {$property}");
           continue;
         }
 
@@ -563,9 +560,9 @@ class Schema {
             ]);
 
             if (!$fieldType) {
-              dump($fieldType, $field_info);
-              die("Cannot detect field type of {$field}");
-              $this->addError("Cannot detect field type of {$field}");
+              // dump($fieldType, $field_info);
+              // die("Cannot detect field type of {$field}");
+              $this->addError("Cannot convert Drupal field type '{$field}' -> GrahpQL field type.");
               continue;
             }
 
@@ -741,9 +738,9 @@ class Schema {
     }
 
     if (!$type) {
-      dump($context);
-      die("Cannot convert {$drupalType} to GraphQL type.");
-      $this->addError("Cannot convert {$drupalType} to GraphQL type. " . print_r($context, TRUE));
+      // dump($context, debug_backtrace());
+      // die("Cannot convert {$drupalType} to GraphQL type.");
+      $this->addError("Cannot convert Drupal property type '{$drupalType}' -> GraphQL type. Please register this type with hook_graphql_api_info()");
     }
 
     return $type;
