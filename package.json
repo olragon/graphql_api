@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "babel-loader": "^6.4.0",
     "css-loader": "^0.26.1",
     "graphiql": "^0.8.0",
     "graphql": "^0.8.2",
