@@ -13,7 +13,7 @@ module.exports = {
     loaders: [
       {
         test: /\.jsx?$/,
-        loader: 'babel-loader?cacheDirectory=true'
+        loader: 'babel-loader?cacheDirectory=true&presets[]=es2015&presets[]=react'
       },
       {
         test: /\.css$/,

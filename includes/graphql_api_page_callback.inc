@@ -15,23 +15,22 @@ function graphql_api_page_callback() {
     $data = $_POST;
   }
 
-  if (!empty($data)) {
-    if (empty($data['variables'])) {
-      $data['variables'] = [];
-    }
-  }
-
-  if (empty($data['query'])) {
-    $data['query'] = file_get_contents(__DIR__ . '/../tests/fixtures/instrospec.graphql');
-    $is_introspec = TRUE;
-  }
-
   $requestString = isset($data['query']) ? $data['query'] : null;
   $operationName = isset($data['operation']) ? $data['operation'] : null;
-  $variableValues = isset($data['variables']) ? $data['variables'] : null;
+  $variableValues = isset($data['variables']) ? $data['variables'] : [];
 
-  $is_introspec = FALSE;
   try {
+    if (empty($requestString)) {
+      if( user_access('use graphql_api introspection') ) {
+        $requestString = file_get_contents(__DIR__ . '/../tests/fixtures/instrospec.graphql');
+        $is_introspec = TRUE;
+
+      } else {
+        throw new Exception(t("User without permission `use graphql_api introspection` cannot browse the schema"));
+      }
+    }
+
+    $is_introspec = FALSE; // @FIXME
     if ($is_introspec && $cache = cache_get('graphql_api_introspec') && empty($_GET['nocache'])) {
       $result = $cache->data;
     } else {
@@ -47,7 +46,7 @@ function graphql_api_page_callback() {
         $variableValues,
         $operationName
       );
-      
+
       if (!empty($schemaBuilder->errors)) {
         $result['schema_errors'] = $schemaBuilder->errors;
       }
@@ -63,7 +62,7 @@ function graphql_api_page_callback() {
       ]
     ];
   }
-  
+
   drupal_json_output($result);
   exit;
 }

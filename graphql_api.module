@@ -50,7 +50,11 @@ function graphql_api_permission() {
   return array(
     'use graphql_api query' => array(
       'title' => t('Use GraphQL query'),
-      'description' => t('Perform query on graphql endpoint.'),
+      'description' => t('Perform query on GraphQL endpoint.'),
+    ),
+    'use graphql_api introspection' => array(
+      'title' => t('Browse GraphQL schema'),
+      'description' => t('Perform introspection query on GraphQL endpoint.'),
     ),
   );
 }

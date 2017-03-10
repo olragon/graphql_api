@@ -10,7 +10,7 @@ function boot() {
   ReactDOM.render(<GraphiQL fetcher={graphQLFetcher} />, document.getElementById('graphqleditor'));
 
   function graphQLFetcher(graphQLParams) {
-    return fetch(Drupal.settings.basePath + 'graphql', {
+    return fetch(Drupal.settings.basePath + Drupal.settings.pathPrefix + 'graphql', {
       credentials: 'include',
       method: 'post',
       headers: { 'Content-Type': 'application/json' },
