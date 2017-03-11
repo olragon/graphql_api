@@ -614,10 +614,18 @@ class Schema {
             $fields[$field] = [
               'type' => $fieldType,
               'description' => isset($field_info['description']) ? $field_info['description'] : '',
-              'resolve' => function ($value, $args, $context, ResolveInfo $info) use ($entity_type, $bundle, $field) {
+              'resolve' => function ($value, $args, $context, ResolveInfo $info) use ($entity_type, $bundle, $field, $fieldType) {
                 $wrap = entity_metadata_wrapper($entity_type, $value);
                 if ($wrap->__isset($field)) {
                   $items = $wrap->{$field}->value();
+                  if (in_array($fieldType->name, ['field_item_image', 'field_item_file']) && !empty($items['fid'])) {
+                    $items['file'] = file_load($items['fid']);
+                  }
+                  if ($fieldType instanceof ListOfType) {
+                    foreach ($items as $index => $item) {
+                      $items[$index]['file'] = file_load($item['fid']);
+                    }
+                  }
                   return $items;
                 }
                 return NULL;
