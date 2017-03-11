@@ -618,14 +618,18 @@ class Schema {
                 $wrap = entity_metadata_wrapper($entity_type, $value);
                 if ($wrap->__isset($field)) {
                   $items = $wrap->{$field}->value();
+
+                  // field file, image
                   if (in_array($fieldType->name, ['field_item_image', 'field_item_file']) && !empty($items['fid'])) {
                     $items['file'] = file_load($items['fid']);
                   }
-                  if ($fieldType instanceof ListOfType) {
+                  // field file, image multiple
+                  if ($fieldType instanceof ListOfType && in_array($fieldType->ofType->name, ['field_item_image', 'field_item_file'])) {
                     foreach ($items as $index => $item) {
                       $items[$index]['file'] = file_load($item['fid']);
                     }
                   }
+
                   return $items;
                 }
                 return NULL;
