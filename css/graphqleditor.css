@@ -1,7 +1,11 @@
-#graphqleditor {
+#graphql-api-graphiql {
     top: 0;
     left: 0;
     position: fixed;
     bottom: 0;
     right: 0;
+}
+
+body.toolbar #graphql-api-graphiql {
+    top: 30px;
 }

@@ -1,7 +1,9 @@
 var path = require('path');
+var webpack = require('webpack');
 
 module.exports = {
   cache: true,
+  mode: 'production',
   devtool: 'cheap-module-source-map',
   entry: ['./js/src/index.js'],
   output: {
@@ -10,15 +12,35 @@ module.exports = {
     publicPath: '/'
   },
   module: {
-    loaders: [
+    rules: [
+      {
+        test: /\.flow$/,
+        loader: 'ignore-loader'
+      },
+      {
+        test: /\.mjs$/,
+        include: /node_modules/,
+        type: "javascript/auto",
+      },
       {
         test: /\.jsx?$/,
-        loader: 'babel-loader?cacheDirectory=true&presets[]=es2015&presets[]=react'
+        exclude: /(node_modules|bower_components)/,
+        use: {
+          loader: 'babel-loader',
+          options: { babelrc: true }
+        }
       },
       {
         test: /\.css$/,
-        loaders: ["style-loader", "css-loader"]
+        use: [
+          { loader: "style-loader" },
+          { loader: "css-loader" }
+        ]
       }
     ]
+  },
+  resolve: {
+    mainFields: ['browser', 'main', 'module'],
+    extensions: ['.mjs', '.js', '.json', '.jsx']
   }
 };

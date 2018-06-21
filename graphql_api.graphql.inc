@@ -13,151 +13,104 @@ use GraphQL\Type\Definition\ObjectType;
 function graphql_api_graphql_api_info() {
   return [
     'types' => [
-      'text_formatted' => new ObjectType([
-        'name' => 'text_formatted',
-        'fields' => [
-          'value' => array(
-            'type' => Type::string(),
-            'description' => t('Text'),
-          ),
-          'summary' => array(
-            'type' => Type::string(),
-            'description' => t('Summary'),
-          ),
-          'format' => array(
-            'type' => Type::string(),
-            'description' => t('Text format'),
-          ),
+      'text_formatted'   => new ObjectType(
+        [
+          'name'   => 'text_formatted',
+          'fields' => [
+            'value'   => [
+              'type'        => Type::string(),
+              'description' => t('Text'),
+            ],
+            'summary' => [
+              'type'        => Type::string(),
+              'description' => t('Summary'),
+            ],
+            'format'  => [
+              'type'        => Type::string(),
+              'description' => t('Text format'),
+            ],
+          ],
         ]
-      ]),
-      'field_item_file' => new ObjectType([
-        'name' => 'field_item_file',
+      ),
+      'image_styles' => new ObjectType([
+        'name'   => 'image_styles',
         'fields' => function () {
-          $schema = graphql_api();
-          $file_type = $schema->getObjectType('file_file');
-          if (module_exists('file_entity')) {
-            $file_type = $schema->getInterfaceType('file');
+          $fields = [];
+          foreach (image_styles() as $style_name => $info) {
+            $field_name = preg_replace('/[^_a-zA-Z0-9]/', '_', $style_name);
+            if (preg_match('/^[_a-zA-Z][_a-zA-Z0-9]*$/', $field_name)) {
+              $fields[$field_name] = [
+                'type' => Type::string(),
+                'description' => $info['label']
+              ];
+            } else {
+              watchdog('GraphQL', "image_styles '{$style_name}' is ignored, not match pattern /^[_a-zA-Z][_a-zA-Z0-9]*$/");
+            }
           }
-          return [
-            'description' => [
-              'type' => Type::string(),
-              'description' => t('Alt')
-            ],
-            'display' => [
-              'type' => Type::string(),
-              'description' => t('Display')
-            ],
-            'file' => [
-              'type' => $file_type,
-              'description' => t('File')
-            ]
-          ];
+          return $fields;
         }
       ]),
-      'field_item_image' => new ObjectType([
-        'name' => 'field_item_image',
-        'fields' => function () {
-          $schema = graphql_api();
-          $file_type = $schema->getObjectType('file_file');
-          if (module_exists('file_entity')) {
-            $file_type = $schema->getInterfaceType('file');
-          }
-          return [
-            'description' => [
-              'type' => Type::string(),
-              'description' => t('Alt')
-            ],
-            'display' => [
-              'type' => Type::string(),
-              'description' => t('Display')
-            ],
-            'alt' => [
-              'type' => Type::string(),
-              'description' => t('Alt')
-            ],
-            'title' => [
-              'type' => Type::string(),
-              'description' => t('Title')
-            ],
-            'width' => [
-              'type' => Type::float(),
-              'description' => t('Width')
-            ],
-            'height' => [
-              'type' => Type::float(),
-              'description' => t('Height')
-            ],
-            'file' => [
-              'type' => $file_type,
-              'description' => t('File')
-            ]
-          ];
-        }
-      ]),
-      'socialfield' => Type::listOf(new ObjectType([
-        'name' => 'socialfield',
-        'fields' => [
-          'service' => [
-            'type' => Type::string(),
-            'description' => t('Service')
-          ],
-          'url' => [
-            'type' => Type::string(),
-            'description' => t('URL')
-          ],
-          'weight' => [
-            'type' => Type::int(),
-            'description' => t('Weight')
-          ]
+      'field_item_file'  => new ObjectType(
+        [
+          'name'   => 'field_item_file',
+          'fields' => function () {
+            graphql_api()->addEntityGqlDefinition('file');
+            $type = graphql_api()->getInterfaceType('file');
+            return [
+              'file'        => [
+                'type'        => $type,
+                'description' => t('File'),
+                'resolve'     => function ($value) {
+                  if ($value) {
+                    $file = file_load($value['fid']);
+                    return entity_metadata_wrapper('file', $file);
+                  }
+                  return NULL;
+                },
+              ],
+              'description' => [
+                'type'        => Type::string(),
+                'description' => t('Alt'),
+              ],
+              'display'     => [
+                'type'        => Type::string(),
+                'description' => t('Display'),
+              ],
+            ];
+          },
         ]
-      ])),
-      'field_item_name' => new ObjectType([
-        'name' => 'field_item_name',
-        'fields' => [
-          'title' => [
-            'type' => Type::string(),
-            'description' => t('The title of the name.')
-          ],
-          'given' => [
-            'type' => Type::string(),
-            'description' => t('The given name.')
-          ],
-          'middle' => [
-            'type' => Type::string(),
-            'description' => t('The middle of the name.')
-          ],
-          'family' => [
-            'type' => Type::string(),
-            'description' => t('The family of the name.')
-          ],
-          'generational' => [
-            'type' => Type::string(),
-            'description' => t('The generational of the name.')
-          ],
-          'credentials' => [
-            'type' => Type::string(),
-            'description' => t('The credentials of the name.')
-          ]
+      ),
+      'field_item_image' => new ObjectType(
+        [
+          'name'   => 'field_item_image',
+          'fields' => function () {
+            // graphql_api()->addEntityGqlDefinition('file');
+            // $type = graphql_api()->getObjectType('file');
+            return [
+              'fid'         => [
+                'type'        => Type::string(),
+                'description' => t('File ID'),
+              ],
+              'description' => [
+                'type'        => Type::string(),
+                'description' => t('Alt'),
+              ],
+              'display'     => [
+                'type'        => Type::string(),
+                'description' => t('Display'),
+              ],
+              'alt'         => [
+                'type'        => Type::string(),
+                'description' => t('Alt'),
+              ],
+              'title'       => [
+                'type'        => Type::string(),
+                'description' => t('Title'),
+              ],
+            ];
+          },
         ]
-      ]),
-      'field_item_link' => new ObjectType([
-        'name' => 'field_item_link',
-        'fields' => [
-          'title' => [
-            'type' => Type::string(),
-            'description' => t('The title of the link.')
-          ],
-          'url' => [
-            'type' => Type::string(),
-            'description' => t('The URL of the link.')
-          ],
-          // @todo convert attributes to JSON?
-//          'attributes' => [
-//            'type' => Type::string(),
-//            'description' => t('The attributes of the link.')
-//          ],
-        ]
-      ])
-    ]
+      ),
+    ],
   ];
 }

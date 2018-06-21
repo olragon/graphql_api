@@ -571,8 +571,6 @@ class Schema {
             if (!is_callable($fieldType) && isset($this->interfaceTypes[$fieldType->name])) {
               $field_info = field_info_field($field);
               switch ($field_info['type']) {
-                case 'field_collection':
-                  break;
                 case 'taxonomy_term_reference':
                   $voca = $field_info['settings']['allowed_values'][0]['vocabulary'];
                   if (isset($this->objectTypes['taxonomy_term_' . $voca])) {
@@ -605,9 +603,6 @@ class Schema {
                     ]);
                   }
                   break;
-                default:
-                  dump($field, $fieldType, $field_info);
-                  die("Try to resolve interface to object in field level failed. {$field} {$entity_type} {$bundle}");
               }
             }
 

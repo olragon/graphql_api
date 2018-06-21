@@ -7,6 +7,7 @@
         }
     ],
     "require": {
-        "webonyx/graphql-php": "dev-master"
+        "webonyx/graphql-php": "dev-master",
+        "symfony/var-dumper": "*"
     }
 }

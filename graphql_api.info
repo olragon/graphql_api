@@ -4,6 +4,7 @@ core = 7.x
 dependencies[] = entity
 dependencies[] = xautoload
 dependencies[] = composer_manager
+dependencies[] = file_entity
 
 files[] = tests/graphql_api.test
 ; Information added by Drupal.org packaging script on 2016-11-22
