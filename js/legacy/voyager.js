@@ -4,7 +4,7 @@ Drupal.behaviors.graphql_api_voyager = {
       return new Promise(function (resolve, reject) {
         jQuery.ajax({
           url: settings.basePath + 'graphql',
-          method: 'post',
+          type: 'POST',
           contentType: "application/json; charset=utf-8",
           data: JSON.stringify({
             query: introspectionQuery,

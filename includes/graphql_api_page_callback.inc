@@ -93,8 +93,6 @@ function graphql_api_page_callback() {
     drupal_json_output($result);
     exit;
   } catch (Exception $exception) {
-    dump($exception);
-    die();
     $result = [
       'errors' => [
         ['message' => $exception->getMessage(), 'backtrace' => debug_backtrace()]
