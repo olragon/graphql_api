@@ -110,7 +110,7 @@ function graphql_api_graphql_api_info() {
             ];
           },
         ]
-      ),
+      )
     ],
   ];
 }

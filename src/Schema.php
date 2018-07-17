@@ -677,9 +677,17 @@ class Schema {
   public function addFieldDefs() {
     $this->collectTimeMetric(__METHOD__);
     foreach (field_info_fields() as $field => $field_info) {
+      $field_properties = [];
       if (!empty($field_info['columns'])) {
+        $field_properties = $field_info['columns'];
+      }
+      if (!empty($field_info['property info'])) {
+        $field_properties = $field_info['property info'];
+      }
+
+      if (!empty($field_properties)) {
         $graphql_fields = [];
-        foreach ($field_info['columns'] as $column => $info) {
+        foreach ($field_properties as $column => $info) {
           $graphql_fields[$column] = [
             'type' => $this->drupalToGqlFieldType($info['type']),
             'description' => ''
@@ -699,6 +707,7 @@ class Schema {
           $this->addObjectType($field_info['type'], $objectDef);
         }
       }
+      
     }
     $this->collectTimeMetric(__METHOD__);
   }
@@ -1472,13 +1481,17 @@ class Schema {
             if ($field_info['type'] === 'a_field_relation_reference') {
               continue;
             }
-
-            $fieldType = $this->gqlFieldType($field_info['type'], [
-              'entity_type' => $entity_type,
-              'bundle' => $bundle,
-              'property' => $field,
-              'info' => $field_info
-            ]);
+            
+            if (isset($this->objectTypes[$field])) {
+              $fieldType = $this->objectTypes[$field];
+            } else {
+              $fieldType = $this->gqlFieldType($field_info['type'], [
+                'entity_type' => $entity_type,
+                'bundle' => $bundle,
+                'property' => $field,
+                'info' => $field_info
+              ]);
+            }
 
             if (!$fieldType) {
               $this->addError("Cannot detect field type of {$field}");
@@ -1748,10 +1761,6 @@ class Schema {
           break;
         case 'datetime':
           // @fixme datetime should have object defs
-          $type = Type::string();
-          break;
-        case 'struct':
-          // @fixme struct should have object defs
           $type = Type::string();
           break;
         case 'array':
