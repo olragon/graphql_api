@@ -13,6 +13,21 @@ use GraphQL\Type\Definition\ObjectType;
 function graphql_api_graphql_api_info() {
   return [
     'types' => [
+      'field_item_link' => new ObjectType([
+        'name' => 'field_item_link',
+        'fields' => function() {
+          return [
+            'title' => [
+              'type' => Type::string(),
+              'description' => t('The title of the link.')
+            ],
+            'url' => [
+              'type' => Type::string(),
+              'description' => t('The URL of the link.')
+            ],
+          ];
+        }
+      ]),
       'text_formatted'   => new ObjectType(
         [
           'name'   => 'text_formatted',
