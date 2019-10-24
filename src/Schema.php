@@ -441,7 +441,7 @@ class Schema {
                 return entity_metadata_wrapper($type, $id);
               }, $ids);
               $entities = array_filter($entities, function ($entity) use ($op, $type) {
-                return entity_access($op, $type, $entity);
+                return $entity->entityAccess($op);
               });
               return $entities;
             }
