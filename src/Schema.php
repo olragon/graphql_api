@@ -1537,12 +1537,7 @@ class Schema {
               'type' => $fieldType,
               'description' => isset($field_info['description']) ? $field_info['description'] : '',
               'resolve' => function ($value, $args, $context, ResolveInfo $info) use ($entity_type, $bundle, $field) {
-                $wrap = entity_metadata_wrapper($entity_type, $value);
-                if ($wrap->__isset($field)) {
-                  $items = $wrap->{$field}->value();
-                  return $items;
-                }
-                return NULL;
+                return field_get_items($entity_type, $value, $field)[0];
               }
             ];
           }
