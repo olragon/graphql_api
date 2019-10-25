@@ -1444,9 +1444,6 @@ class Schema {
             if (($value instanceof \EntityDrupalWrapper)) {
               $wrap = $value;
             } else {
-              if ($value && !($value instanceof \Entity) && $entity_type != 'user') {
-                return isset($value->{$property}) ? $value->{$property} : null;
-              }
               if (method_exists($value, 'wrapper')) {
                 $wrap = $value->wrapper();
               } else {
